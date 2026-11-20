@@ -98,3 +98,10 @@ describe("generateStructured", () => {
     expect(generateContent).not.toHaveBeenCalled();
   });
 });
+
+describe("clientOptions", () => {
+  it("uses the v1beta API so model aliases and JSON schema output work", async () => {
+    const { clientOptions } = await import("@/lib/ai");
+    expect(clientOptions("KEY")).toEqual({ apiKey: "KEY", apiVersion: "v1beta" });
+  });
+});

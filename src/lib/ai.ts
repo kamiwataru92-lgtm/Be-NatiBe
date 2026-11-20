@@ -26,9 +26,14 @@ export type GenerateArgs<T> = {
 
 const BLOCKING_FINISH = new Set(["SAFETY", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII", "RECITATION", "IMAGE_SAFETY"]);
 
+/** SDK の既定は v1。モデル名の別名（-latest）と JSON スキーマ指定は v1beta でしか使えない */
+export function clientOptions(apiKey: string | undefined) {
+  return { apiKey, apiVersion: "v1beta" };
+}
+
 let defaultClient: GoogleGenAI | undefined;
 function getClient(): GoogleGenAI {
-  defaultClient ??= new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  defaultClient ??= new GoogleGenAI(clientOptions(process.env.GEMINI_API_KEY));
   return defaultClient;
 }
 
