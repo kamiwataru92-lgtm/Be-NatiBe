@@ -4,17 +4,17 @@
 
 **Goal:** 「聞く → 表現を拾う → 自分で返す → フィードバック」の10分学習を、合言葉付きの Web アプリとして動かす。
 
-**Architecture:** Next.js（App Router）1つで画面とサーバー側 API を持つ。Claude 呼び出しはサーバー側の `generateStructured()` に集約し、出力は zod スキーマで検証した JSON。読み上げ・音声入力はブラウザ機能を差し替え可能なインターフェース越しに使い、学習データは localStorage に置く。
+**Architecture:** Next.js（App Router）1つで画面とサーバー側 API を持つ。AI（Gemini）呼び出しはサーバー側の `generateStructured()` に集約し、出力は zod スキーマで検証した JSON。読み上げ・音声入力はブラウザ機能を差し替え可能なインターフェース越しに使い、学習データは localStorage に置く。
 
-**Tech Stack:** Next.js 15 / React / TypeScript / `@anthropic-ai/sdk` / zod / Vitest（＋ @testing-library/react, jsdom）/ Playwright（既存インストール済みのものを使う）
+**Tech Stack:** Next.js 15 / React / TypeScript / `@google/genai` / zod / Vitest（＋ @testing-library/react, jsdom）/ Playwright（既存インストール済みのものを使う）
 
 **Spec:** `docs/superpowers/specs/2026-11-20-be-natibe-prototype-design.md`
 
 ## Global Constraints
 
 - 対象言語はアメリカ英語（`en-US`）。言語固有の値は `src/config/languages.ts` だけに置く
-- 外部サービスは Claude API のみ。API キーはサーバー側だけで使い、クライアントのバンドルに入れない（`import "server-only"`）
-- 環境変数: `ANTHROPIC_API_KEY`, `APP_PASSCODE`, `SESSION_SECRET`, `CLAUDE_MODEL`（既定 `claude-haiku-5-5`。クレジット節約のためユーザー決定）, `CLAUDE_MOCK`（`1` で固定データを返す。ローカル確認・E2E 用）
+- 外部サービスは Google Gemini API（無料枠）のみ。API キーはサーバー側だけで使い、クライアントのバンドルに入れない（`import "server-only"`）
+- 環境変数: `GEMINI_API_KEY`, `APP_PASSCODE`, `SESSION_SECRET`, `AI_MODEL`（既定 `gemini-flash-latest`）, `AI_MOCK`（`1` で固定データを返す。ローカル確認・E2E 用）
 - 合言葉なしでは `/login` 以外の画面も `/api/*`（`/api/login` を除く）も使えない
 - フィードバックで文法の細かい誤りは、意味が通じなくなる場合だけ扱う
 - 練習の会話は学習者の発言 5 回まで。学習者の1発言は 500 文字まで
@@ -23,7 +23,7 @@
 
 ## Review Focus
 
-1. **Claude がエラー・拒否（`stop_reason: "refusal"`）・形式不正を返す** → 画面は落ちず「うまく作れませんでした。もう一度試す」ボタンを出す（Task 3, 5, 9 にテスト）
+1. **Gemini がエラー・安全フィルタでの停止・形式不正・回数上限（429）を返す** → 画面は落ちず「うまく作れませんでした。もう一度試す」ボタンを出す。429 のときは「混み合っています。少し待ってからもう一度試してください」（Task 3, 5, 9 にテスト）
 2. **音声認識がないブラウザ（Firefox、iOS の一部）や、声の一覧が空・遅延して届く** → テキスト入力だけで最後まで進める。読み上げは声の取得を最大 1 秒待ってから既定の声で話す（Task 7, 9 にテスト）
 3. **localStorage が壊れている・使えない（プライベートモード）** → 既定値で動き、例外を出さない（Task 6 にテスト）
 4. **学習の途中で Cookie が切れる・合言葉が変わる** → API は 401 JSON、画面は `/login` に移動して戻り先を保持（Task 4, 9 にテスト）
@@ -39,8 +39,8 @@ src/
   lib/levels.ts              レベル定義と難易度パラメータ
   lib/schemas.ts             AI 出力とAPI入力の zod スキーマ・型
   lib/prompts.ts             AI への指示文の組み立て
-  lib/claude.ts              Claude 呼び出し（server-only）
-  lib/mock-fixtures.ts       CLAUDE_MOCK=1 用の固定データ
+  lib/ai.ts                  Gemini 呼び出し（server-only）
+  lib/mock-fixtures.ts       AI_MOCK=1 用の固定データ
   lib/auth.ts                署名付きセッショントークン（Web Crypto）
   lib/storage.ts             localStorage の進捗管理
   lib/api-client.ts          画面から API を呼ぶ関数（401 → /login）
@@ -85,7 +85,7 @@ e2e/lesson.spec.ts
   - `LEVEL_PROFILES: Record<Level, LevelProfile>` — beginner `{0.8, heavy, basic, [4,6]}`, intermediate `{0.95, medium, common, [6,8]}`, advanced `{1.05, light, full, [6,8]}`
   - `isLevel(v: unknown): v is Level`
 
-- [ ] **Step 1:** create-next-app で土台を作り、`@anthropic-ai/sdk zod server-only` と dev に `vitest @vitejs/plugin-react jsdom @testing-library/react @testing-library/jest-dom` を入れる。`package.json` に `"test": "vitest run"`, `"e2e": "playwright test"`。`.env.example` に Global Constraints の 5 変数を書く
+- [ ] **Step 1:** create-next-app で土台を作り、`@google/genai zod server-only` と dev に `vitest @vitejs/plugin-react jsdom @testing-library/react @testing-library/jest-dom` を入れる。`package.json` に `"test": "vitest run"`, `"e2e": "playwright test"`。`.env.example` に Global Constraints の 5 変数を書く
 - [ ] **Step 2: 失敗するテストを書く**
   - `getLanguage("en-US").speechLang === "en-US"`、`scenes.length >= 6`、全 scene の `id` が一意
   - `getLanguage("xx")` が throw
@@ -126,28 +126,30 @@ e2e/lesson.spec.ts
 - [ ] **Step 4:** `npm test` → PASS
 - [ ] **Step 5:** コミット `feat: add AI output schemas and prompt builders`
 
-### Task 3: Claude 呼び出し
+### Task 3: AI（Gemini）呼び出し
 
 **Files:**
-- Create: `src/lib/claude.ts`, `src/lib/mock-fixtures.ts`
-- Test: `tests/lib/claude.test.ts`
+- Create: `src/lib/ai.ts`, `src/lib/mock-fixtures.ts`
+- Test: `tests/lib/ai.test.ts`
 
 **Interfaces:**
 - Consumes: Task 2 のスキーマ
 - Produces:
-  - `class AiError extends Error { kind: "refusal" | "invalid_output" | "upstream" }`
-  - `generateStructured<T>(args: { name: "lesson" | "chatTurn" | "feedback" | "placement"; schema: z.ZodType<T>; system: string; messages: { role: "user" | "assistant"; content: string }[]; effort: "low" | "medium"; client?: Anthropic }): Promise<T>`
+  - `class AiError extends Error { kind: "refusal" | "invalid_output" | "rate_limited" | "upstream" }`
+  - `generateStructured<T>(args: { name: "lesson" | "chatTurn" | "feedback" | "placement"; schema: z.ZodType<T>; system: string; messages: { role: "user" | "assistant"; content: string }[]; client?: GoogleGenAI }): Promise<T>`
+  - この関数が AI 提供元との唯一の接点。将来 Claude 等に替えるときはこのファイルだけを書き換える
 
 - [ ] **Step 1: 失敗するテストを書く**（`client` に偽物を注入）
-  - 正常な JSON → スキーマ型で返る
-  - `stop_reason: "refusal"` → `AiError` kind `refusal`
-  - スキーマに合わない出力 → kind `invalid_output`
-  - SDK が `Anthropic.APIError` を投げる → kind `upstream`
-  - `CLAUDE_MOCK=1` のとき client を呼ばず `mock-fixtures` の `name` に対応するデータを返し、それがスキーマを通る
+  - 正常な JSON テキスト → スキーマ型で返る
+  - 応答の `finishReason` が `SAFETY` などの停止、または `promptFeedback.blockReason` あり → kind `refusal`
+  - JSON でない・スキーマに合わない出力 → kind `invalid_output`
+  - SDK が status 429 のエラーを投げる → kind `rate_limited`、その他のエラー → kind `upstream`
+  - `messages` の `assistant` が Gemini の `model` ロールに写される
+  - `AI_MOCK=1` のとき client を呼ばず `mock-fixtures` の `name` に対応するデータを返し、それがスキーマを通る
 - [ ] **Step 2:** `npm test` → FAIL
-- [ ] **Step 3:** 実装する。`import "server-only"`。モデルは `process.env.CLAUDE_MODEL ?? "claude-haiku-5-5"`、`max_tokens: 16000`、`thinking` は送らない（adaptive が既定）。`client.messages.parse({ ..., output_config: { effort, format: zodOutputFormat(schema) } })` を使う（Haiku 5.5 には拒否時の自動切替がないので fallbacks は付けない）。`stop_reason` を `parsed_output` より先に確認する。会話は effort `low`、レッスン・フィードバック・診断は `medium`
+- [ ] **Step 3:** 実装する。`import "server-only"`。`new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })`、モデルは `process.env.AI_MODEL ?? "gemini-flash-latest"`。`client.models.generateContent({ model, contents, config: { systemInstruction: system, responseMimeType: "application/json", responseJsonSchema: z.toJSONSchema(schema) } })` を使い、`response.text` を `JSON.parse` → `schema.safeParse`。SDK の型名・引数名はインストールした `@google/genai` の型定義で確認する（`responseJsonSchema` がなければ `responseSchema`）。自動リトライはしない（無料枠の回数を浪費しないため）
 - [ ] **Step 4:** `npm test` → PASS
-- [ ] **Step 5:** コミット `feat: add structured Claude client with mock mode`
+- [ ] **Step 5:** コミット `feat: add structured Gemini client with mock mode`
 
 ### Task 4: 合言葉
 
@@ -179,16 +181,17 @@ e2e/lesson.spec.ts
 - Test: `tests/api/routes.test.ts`
 
 **Interfaces:**
-- Consumes: Task 2 のリクエストスキーマ・指示文、Task 3 の `generateStructured`, `AiError`
+- Consumes: Task 2 のリクエストスキーマ・指示文、Task 3 の `generateStructured`, `AiError`（`@/lib/ai`）
 - Produces（すべて POST、JSON）:
   - `/api/lesson` `LessonRequest` → `Lesson`
   - `/api/chat` `ChatRequest` → `ChatTurn`
   - `/api/feedback` `FeedbackRequest` → `SessionFeedback`
   - `/api/placement` `PlacementRequest` → `PlacementResult`
-  - エラー: 入力不正 400 `{ error: "bad_request" }`、`AiError` 502 `{ error: "ai_failed", kind }`
+  - エラー: 入力不正 400 `{ error: "bad_request" }`、`AiError` kind `rate_limited` は 429 `{ error: "rate_limited" }`、それ以外の `AiError` は 502 `{ error: "ai_failed", kind }`
 
 - [ ] **Step 1: 失敗するテストを書く**（`generateStructured` を `vi.mock`）
-  - 各ルートが正しい入力で 200 とモック値を返し、`name` と `effort` を正しく渡す
+  - 各ルートが正しい入力で 200 とモック値を返し、`name` を正しく渡す
+  - `AiError("rate_limited")` → 429 `{ error: "rate_limited" }`
   - `/api/chat` に learner 6 回・501 文字・空文字 → 400
   - 未知の `sceneId`、不正な `level` → 400
   - `generateStructured` が `AiError("refusal")` → 502 `{ error: "ai_failed", kind: "refusal" }`
@@ -264,7 +267,8 @@ e2e/lesson.spec.ts
   - `<ErrorRetry message?: string onRetry: () => void />` 既定文言「うまく作れませんでした。」ボタン「もう一度試す」
 
 - [ ] **Step 1: 失敗するテストを書く**
-  - `postJson` が 401 で `location.assign` を呼ぶ、502 で `ApiError("ai_failed")`
+  - `postJson` が 401 で `location.assign` を呼ぶ、502 で `ApiError("ai_failed")`、429 で `ApiError("rate_limited")`
+  - `ErrorRetry` は code `rate_limited` のとき「混み合っています。少し待ってからもう一度試してください」を出す
   - ホーム: level が null なら「まずはレベル診断」ボタンだけ、ある場合はレベル名・学習回数・「今日の学習をはじめる」・レベル変更セレクト・「表現リスト」リンクを表示
   - 表現リスト: 保存済み表現を表示し、チェックで `learned` が切り替わって保存される。0 件なら「まだ表現はありません」
 - [ ] **Step 2:** `npm test` → FAIL
@@ -307,10 +311,10 @@ e2e/lesson.spec.ts
 - Modify: `README.md`
 - Create: `playwright.config.ts`, `e2e/lesson.spec.ts`
 
-- [ ] **Step 1: E2E を書く**（`CLAUDE_MOCK=1 APP_PASSCODE=test SESSION_SECRET=<32文字> npm run build && npm start` を webServer に設定、viewport 375×812）
+- [ ] **Step 1: E2E を書く**（`AI_MOCK=1 APP_PASSCODE=test SESSION_SECRET=<32文字> npm run build && npm start` を webServer に設定、viewport 375×812）
   - `/` → `/login` に飛ぶ → 違う合言葉でエラー → 正しい合言葉 → 診断 → ホーム → 学習 4 ステップをテキスト入力で完走 → 表現リストに表現がある
   - 各画面で `document.documentElement.scrollWidth <= 375`
 - [ ] **Step 2:** `npx playwright test --trace off` → PASS
-- [ ] **Step 3:** README を書く: アプリの説明、ローカル起動（`.env.local` の作り方、`CLAUDE_MOCK=1` で API キーなしでも動く）、Vercel への公開手順（リポジトリ連携、5 つの環境変数、`SESSION_SECRET` は `openssl rand -base64 32`）、**Anthropic Console で利用上限（spend limit）を設定すること**、合言葉の変え方（`APP_PASSCODE` を変えて再デプロイ。既存の Cookie は `SESSION_SECRET` も変えれば無効化）、読み上げを高品質音声に替える場合は `Speaker` を実装すればよいこと
+- [ ] **Step 3:** README を書く: アプリの説明、ローカル起動（`.env.local` の作り方、`AI_MOCK=1` で API キーなしでも動く）、Gemini API キーの取り方（Google AI Studio でキーを発行。無料枠の上限は AI Studio で確認できる）、Vercel への公開手順（リポジトリ連携、5 つの環境変数、`SESSION_SECRET` は `openssl rand -base64 32`）、**Google Cloud の課金を有効にしないこと**（無料枠のままなら請求は発生しない）、無料枠では送った内容が Google の改善に使われる場合があること、合言葉の変え方（`APP_PASSCODE` を変えて再デプロイ。既存の Cookie は `SESSION_SECRET` も変えれば無効化）、読み上げを高品質音声に替える場合は `Speaker` を実装すればよいこと
 - [ ] **Step 4:** `npm test && npm run build && npx playwright test --trace off` がすべて通る
 - [ ] **Step 5:** コミット `docs: add setup and deploy guide with e2e check`
