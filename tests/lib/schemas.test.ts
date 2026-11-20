@@ -50,3 +50,11 @@ describe("PlacementResultSchema", () => {
     expect(PlacementResultSchema.safeParse({ level: "expert", reasonJa: "理由" }).success).toBe(false);
   });
 });
+
+describe("ChatTurnSchema", () => {
+  it("rejects replies longer than native history allows", async () => {
+    const { ChatTurnSchema } = await import("@/lib/schemas");
+    expect(ChatTurnSchema.safeParse({ reply: "x".repeat(2001), nativeVersion: null, noteJa: "" }).success).toBe(false);
+    expect(ChatTurnSchema.safeParse({ reply: "x".repeat(2000), nativeVersion: null, noteJa: "" }).success).toBe(true);
+  });
+});

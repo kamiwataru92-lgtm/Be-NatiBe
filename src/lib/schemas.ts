@@ -21,8 +21,10 @@ export const LessonSchema = z.object({
 });
 export type Lesson = z.infer<typeof LessonSchema>;
 
+export const MAX_NATIVE_CHARS = 2000;
+
 export const ChatTurnSchema = z.object({
-  reply: z.string().min(1),
+  reply: z.string().min(1).max(MAX_NATIVE_CHARS),
   nativeVersion: z.string().nullable(),
   noteJa: z.string(),
 });
@@ -45,7 +47,7 @@ export const LearnerText = z.string().trim().min(1).max(MAX_LEARNER_CHARS);
 
 export const ChatMessageSchema = z.discriminatedUnion("role", [
   z.object({ role: z.literal("learner"), text: LearnerText }),
-  z.object({ role: z.literal("native"), text: z.string().min(1).max(2000) }),
+  z.object({ role: z.literal("native"), text: z.string().min(1).max(MAX_NATIVE_CHARS) }),
 ]);
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;
 

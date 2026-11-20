@@ -56,3 +56,13 @@ describe("progress storage", () => {
     expect(toggleLearned(on, "wiped").expressions[0].learned).toBe(false);
   });
 });
+
+describe("progress storage when writes fail", () => {
+  it("keeps progress in memory for the tab when setItem throws but getItem works", () => {
+    const base = memStore();
+    const store: Storage = { ...base, getItem: base.getItem, setItem: () => { throw new Error("quota"); } };
+    const p = setLevel(DEFAULT_PROGRESS, "beginner");
+    saveProgress(p, store);
+    expect(loadProgress(store)).toEqual(p);
+  });
+});

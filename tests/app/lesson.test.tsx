@@ -103,4 +103,15 @@ describe("Lesson flow", () => {
     await user.click(screen.getByRole("button", { name: "もう一度試す" }));
     expect(await screen.findByText("Hey, whatcha gettin'?")).toBeInTheDocument();
   });
+
+  it("sends the learner to login keeping /lesson when the session expires mid-chat", async () => {
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, pathname: "/lesson", search: "", assign });
+    const user = userEvent.setup();
+    render(<LessonPage />);
+    await goToChat(user);
+    handlers["/api/chat"] = () => json(401, { error: "unauthorized" });
+    await say(user, "hello");
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("/login?next=%2Flesson"));
+  });
 });

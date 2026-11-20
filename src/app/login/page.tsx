@@ -2,10 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
-
-function safeNext(next: string | null): string {
-  return next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
-}
+import { safeNext } from "@/lib/safe-next";
 
 function LoginForm() {
   const params = useSearchParams();
@@ -24,7 +21,7 @@ function LoginForm() {
         body: JSON.stringify({ passcode }),
       });
       if (res.ok) {
-        window.location.assign(safeNext(params.get("next")));
+        window.location.assign(safeNext(params.get("next"), window.location.origin));
         return;
       }
       setError(res.status === 401 ? "合言葉が違います" : "いまは入れません。管理者に連絡してください");

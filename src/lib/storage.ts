@@ -17,6 +17,7 @@ const ProgressSchema = z.object({
 
 // localStorage が使えない環境では、このタブの中だけで値を持つ
 let memoryFallback: Progress = DEFAULT_PROGRESS;
+let saveFailed = false;
 
 function defaultStore(): Storage | undefined {
   try {
@@ -27,6 +28,7 @@ function defaultStore(): Storage | undefined {
 }
 
 export function loadProgress(store: Storage | undefined = defaultStore()): Progress {
+  if (saveFailed) return memoryFallback;
   try {
     const raw = store?.getItem(STORAGE_KEY);
     if (!raw) return store ? DEFAULT_PROGRESS : memoryFallback;
@@ -41,7 +43,9 @@ export function saveProgress(p: Progress, store: Storage | undefined = defaultSt
   memoryFallback = p;
   try {
     store?.setItem(STORAGE_KEY, JSON.stringify(p));
+    saveFailed = false;
   } catch {
+    saveFailed = true;
     // 保存できなくても学習は続けられる
   }
 }
