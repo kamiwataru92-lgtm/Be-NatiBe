@@ -5,7 +5,10 @@ import { middleware } from "@/middleware";
 import { createSessionToken, SESSION_COOKIE } from "@/lib/auth";
 
 const SECRET = "s".repeat(32);
-beforeEach(() => vi.stubEnv("SESSION_SECRET", SECRET));
+beforeEach(() => {
+  vi.stubEnv("SESSION_SECRET", SECRET);
+  vi.stubEnv("APP_PASSCODE", "sakura");
+});
 afterEach(() => vi.unstubAllEnvs());
 
 const req = (path: string, cookie?: string) =>
@@ -30,5 +33,11 @@ describe("middleware", () => {
     const token = await createSessionToken(SECRET, Date.now());
     expect((await middleware(req("/api/lesson", token))).headers.get("x-middleware-next")).toBe("1");
     expect((await middleware(req("/", token))).headers.get("x-middleware-next")).toBe("1");
+  });
+
+  it("lets everything through when no passcode is configured", async () => {
+    vi.stubEnv("APP_PASSCODE", "");
+    expect((await middleware(req("/api/lesson"))).headers.get("x-middleware-next")).toBe("1");
+    expect((await middleware(req("/lesson"))).headers.get("x-middleware-next")).toBe("1");
   });
 });

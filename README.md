@@ -26,8 +26,8 @@ npm run dev                  # http://localhost:3000
 | 変数 | 内容 |
 | --- | --- |
 | `GEMINI_API_KEY` | Google AI Studio で発行した Gemini API キー |
-| `APP_PASSCODE` | アプリに入るための合言葉 |
-| `SESSION_SECRET` | ログイン状態の署名用。`openssl rand -base64 32` で作った文字列 |
+| `APP_PASSCODE` | アプリに入るための合言葉。**設定しなければ合言葉なしで誰でも開ける** |
+| `SESSION_SECRET` | ログイン状態の署名用（合言葉を使うときだけ必要）。`openssl rand -base64 32` で作った文字列 |
 | `AI_MODEL` | 使うモデル（省略時 `gemini-flash-latest`） |
 | `AI_MOCK` | `1` にすると AI を呼ばず決まったデータを返す。API キーなしで画面と流れを確認できる |
 
@@ -53,8 +53,10 @@ npx playwright test --trace off   # ブラウザでの通しテスト（AI_MOCK=
 ## インターネットに公開する（Vercel）
 
 1. [Vercel](https://vercel.com/) に GitHub アカウントでログインし、「Add New → Project」でこのリポジトリを選ぶ
-2. 「Environment Variables」に `GEMINI_API_KEY`・`APP_PASSCODE`・`SESSION_SECRET` を入れる（`AI_MOCK` は入れない）
-3. 「Deploy」を押す。発行された URL と合言葉を、使ってもらう人にだけ伝える
+2. 「Environment Variables」に `GEMINI_API_KEY` を入れる（`AI_MOCK` は入れない）。合言葉を付けたい場合は `APP_PASSCODE` と `SESSION_SECRET` も入れる
+3. 「Deploy」を押す。発行された URL を使ってもらう人に伝える
+
+合言葉なしで公開すると、URL を知っている人は誰でも使え、その分 Gemini の無料枠を消費します。
 
 ### 合言葉を変えたいとき
 

@@ -5,7 +5,8 @@ const PUBLIC_PATHS = new Set(["/login", "/api/login"]);
 
 export async function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
-  if (PUBLIC_PATHS.has(pathname)) return NextResponse.next();
+  // 合言葉を設定していなければ、誰でも使える公開モード
+  if (!process.env.APP_PASSCODE || PUBLIC_PATHS.has(pathname)) return NextResponse.next();
 
   const ok = await verifySessionToken(req.cookies.get(SESSION_COOKIE)?.value, process.env.SESSION_SECRET ?? "", Date.now());
   if (ok) return NextResponse.next();
