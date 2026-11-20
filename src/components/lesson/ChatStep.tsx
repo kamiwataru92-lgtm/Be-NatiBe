@@ -31,6 +31,7 @@ export function ChatStep({ lesson, level, speechLang, onDone }: { lesson: Lesson
       setBusy(true);
       setError(null);
       setPending(text);
+      if (text) setDraft((d) => (d.trim() === text ? "" : d));
       const base = shown.map(({ role, text }) => ({ role, text }) as ChatMessage);
       const next: ChatMessage[] = text ? [...base, { role: "learner", text }] : base;
       try {
@@ -41,9 +42,10 @@ export function ChatStep({ lesson, level, speechLang, onDone }: { lesson: Lesson
           { role: "native" as const, text: turn.reply },
         ]);
         setPending(null);
-        if (text) setDraft("");
       } catch (e) {
         setError(e instanceof ApiError ? e.code : "unknown");
+        // 送れなかった文は入力欄に戻す（その間に書いた文があればそちらを残す）
+        if (text) setDraft((d) => d || text);
       }
       setBusy(false);
     },

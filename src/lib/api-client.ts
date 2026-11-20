@@ -1,3 +1,5 @@
+import { demoResponse } from "@/lib/demo";
+
 export class ApiError extends Error {
   constructor(public code: string) {
     super(code);
@@ -6,6 +8,10 @@ export class ApiError extends Error {
 }
 
 export async function postJson<T>(path: string, body: unknown, fetchImpl: typeof fetch = fetch): Promise<T> {
+  if (process.env.NEXT_PUBLIC_DEMO === "1") {
+    await new Promise((r) => setTimeout(r, 400));
+    return demoResponse(path, body) as T;
+  }
   let res: Response;
   try {
     res = await fetchImpl(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });

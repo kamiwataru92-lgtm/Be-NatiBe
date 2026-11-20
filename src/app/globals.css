@@ -130,3 +130,5 @@ textarea { resize: vertical; }
   .bubble { animation: pop 0.18s ease-out; }
   @keyframes pop { from { transform: translateY(4px); opacity: 0; } to { transform: none; opacity: 1; } }
 }
+
+.demo-banner { margin: 0; padding: 8px 16px; background: var(--marker); color: #18213a; font-size: 0.85rem; text-align: center; }

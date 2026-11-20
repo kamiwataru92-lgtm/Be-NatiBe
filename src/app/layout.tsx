@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { IS_DEMO } from "@/lib/demo";
 
 export const metadata: Metadata = {
   title: "Be-NatiBe",
@@ -15,7 +16,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ja">
-      <body>{children}</body>
+      <body>
+        {IS_DEMO && <p className="demo-banner">デモ版です。AI は使わず、毎回同じ会話が表示されます。</p>}
+        {children}
+      </body>
     </html>
   );
 }

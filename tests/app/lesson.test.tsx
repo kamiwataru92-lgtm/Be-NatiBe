@@ -114,4 +114,21 @@ describe("Lesson flow", () => {
     await say(user, "hello");
     await waitFor(() => expect(assign).toHaveBeenCalledWith("/login?next=%2Flesson"));
   });
+
+  it("keeps text typed while the previous reply is still loading", async () => {
+    const user = userEvent.setup();
+    render(<LessonPage />);
+    await goToChat(user);
+    let release!: () => void;
+    const ok = handlers["/api/chat"];
+    handlers["/api/chat"] = (b) => {
+      const r = ok(b);
+      return new Promise<Response>((res) => (release = () => res(r))) as unknown as Response;
+    };
+    await say(user, "first");
+    await user.type(screen.getByRole("textbox", { name: "あなたの返事" }), "second");
+    release();
+    await screen.findByText("first");
+    expect(screen.getByRole("textbox", { name: "あなたの返事" })).toHaveValue("second");
+  });
 });
