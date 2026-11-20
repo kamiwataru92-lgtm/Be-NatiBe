@@ -14,7 +14,7 @@
 
 - 対象言語はアメリカ英語（`en-US`）。言語固有の値は `src/config/languages.ts` だけに置く
 - 外部サービスは Claude API のみ。API キーはサーバー側だけで使い、クライアントのバンドルに入れない（`import "server-only"`）
-- 環境変数: `ANTHROPIC_API_KEY`, `APP_PASSCODE`, `SESSION_SECRET`, `CLAUDE_MODEL`（既定 `claude-opus-5-5`）, `CLAUDE_MOCK`（`1` で固定データを返す。ローカル確認・E2E 用）
+- 環境変数: `ANTHROPIC_API_KEY`, `APP_PASSCODE`, `SESSION_SECRET`, `CLAUDE_MODEL`（既定 `claude-haiku-5-5`。クレジット節約のためユーザー決定）, `CLAUDE_MOCK`（`1` で固定データを返す。ローカル確認・E2E 用）
 - 合言葉なしでは `/login` 以外の画面も `/api/*`（`/api/login` を除く）も使えない
 - フィードバックで文法の細かい誤りは、意味が通じなくなる場合だけ扱う
 - 練習の会話は学習者の発言 5 回まで。学習者の1発言は 500 文字まで
@@ -145,7 +145,7 @@ e2e/lesson.spec.ts
   - SDK が `Anthropic.APIError` を投げる → kind `upstream`
   - `CLAUDE_MOCK=1` のとき client を呼ばず `mock-fixtures` の `name` に対応するデータを返し、それがスキーマを通る
 - [ ] **Step 2:** `npm test` → FAIL
-- [ ] **Step 3:** 実装する。`import "server-only"`。モデルは `process.env.CLAUDE_MODEL ?? "claude-opus-5-5"`、`max_tokens: 16000`、`thinking` は送らない（Opus 5.5 は adaptive が既定）、`output_config: { effort, format: zodOutputFormat(schema) }`。拒否時の自動切替のため `client.beta.messages.parse` に `betas: ["server-side-fallback-2026-07-01"]`, `fallbacks: "default"` を付ける。インストールされた SDK の型で `beta.messages.parse` がこれらを受けない場合は `client.messages.parse`（fallbacks なし）にし、その旨を README に書く。`stop_reason` を `parsed_output` より先に確認する。会話は effort `low`、レッスン・フィードバック・診断は `medium`
+- [ ] **Step 3:** 実装する。`import "server-only"`。モデルは `process.env.CLAUDE_MODEL ?? "claude-haiku-5-5"`、`max_tokens: 16000`、`thinking` は送らない（adaptive が既定）。`client.messages.parse({ ..., output_config: { effort, format: zodOutputFormat(schema) } })` を使う（Haiku 5.5 には拒否時の自動切替がないので fallbacks は付けない）。`stop_reason` を `parsed_output` より先に確認する。会話は effort `low`、レッスン・フィードバック・診断は `medium`
 - [ ] **Step 4:** `npm test` → PASS
 - [ ] **Step 5:** コミット `feat: add structured Claude client with mock mode`
 
